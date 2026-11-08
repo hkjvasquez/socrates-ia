@@ -102,7 +102,7 @@ function App() {
             return (
                 <Materias
                     onSeleccionarMateria={setMateriaSeleccionada}
-                    onCerrarSesion={cerrarSesion}
+                   
                 />
             );
 
