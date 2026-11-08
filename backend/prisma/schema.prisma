@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model competencias {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materia_id             String                   @db.Uuid
+  codigo                 String                   @unique @db.VarChar(50)
+  nombre                 String                   @db.VarChar(250)
+  descripcion            String?
+  fecha_creacion         DateTime                 @default(now()) @db.Timestamp(6)
+  materias               materias                 @relation(fields: [materia_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_competencia_materia")
+  resultados_aprendizaje resultados_aprendizaje[]
+  reto_competencia       reto_competencia[]
+}
+
+model evaluaciones_facione {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sesion_tutoria_id String           @db.Uuid
+  interpretacion    Decimal?         @default(0) @db.Decimal(5, 2)
+  analisis          Decimal?         @default(0) @db.Decimal(5, 2)
+  evaluacion        Decimal?         @default(0) @db.Decimal(5, 2)
+  inferencia        Decimal?         @default(0) @db.Decimal(5, 2)
+  explicacion       Decimal?         @default(0) @db.Decimal(5, 2)
+  autorregulacion   Decimal?         @default(0) @db.Decimal(5, 2)
+  observaciones     String?
+  evaluado_por      String?          @default("IA") @db.VarChar(20)
+  fecha_creacion    DateTime         @default(now()) @db.Timestamp(6)
+  sesiones_tutoria  sesiones_tutoria @relation(fields: [sesion_tutoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_facione_sesion")
+}
+
+model habilidades_facione {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo      String  @unique @db.VarChar(50)
+  nombre      String  @db.VarChar(100)
+  descripcion String?
+}
+
+model intentos_reto {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id             String    @db.Uuid
+  reto_id                String    @db.Uuid
+  fecha_inicio           DateTime  @default(now()) @db.Timestamp(6)
+  fecha_fin              DateTime? @db.Timestamp(6)
+  estado                 String    @default("EN_PROCESO") @db.VarChar(20)
+  cantidad_interacciones Int?      @default(0)
+  calificacion           Decimal?  @db.Decimal(5, 2)
+  completado             Boolean?  @default(false)
+  retos                  retos     @relation(fields: [reto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_intento_reto")
+  usuarios               usuarios  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_intento_usuario")
+}
+
+model interacciones_ia {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sesion_tutoria_id   String           @db.Uuid
+  prompt_id           String?          @db.Uuid
+  mensaje_estudiante  String
+  prompt_generado     String
+  respuesta_ia        String
+  modelo              String?          @db.VarChar(100)
+  temperatura         Decimal?         @db.Decimal(4, 2)
+  tokens_entrada      Int?
+  tokens_salida       Int?
+  tiempo_respuesta_ms Int?
+  fecha_creacion      DateTime         @default(now()) @db.Timestamp(6)
+  prompts             prompts?         @relation(fields: [prompt_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_interaccion_prompt")
+  sesiones_tutoria    sesiones_tutoria @relation(fields: [sesion_tutoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_interaccion_sesion")
+}
+
+model materias {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre              String         @unique @db.VarChar(150)
+  descripcion         String?
+  fecha_creacion      DateTime       @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime       @default(now()) @db.Timestamp(6)
+  competencias        competencias[]
+  temas               temas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mensajes {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sesion_tutoria_id     String                  @db.Uuid
+  remitente             String                  @db.VarChar(20)
+  contenido             String
+  fecha_creacion        DateTime                @default(now()) @db.Timestamp(6)
+  sesiones_tutoria      sesiones_tutoria        @relation(fields: [sesion_tutoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_mensaje_sesion")
+  respuestas_estudiante respuestas_estudiante[]
+}
+
+model prompts {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo           String             @unique @db.VarChar(50)
+  nombre           String             @db.VarChar(200)
+  descripcion      String?
+  prompt_sistema   String
+  version          Int                @default(1)
+  activo           Boolean            @default(true)
+  fecha_creacion   DateTime           @default(now()) @db.Timestamp(6)
+  interacciones_ia interacciones_ia[]
+}
+
+model respuestas_estudiante {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sesion_tutoria_id String           @db.Uuid
+  mensaje_id        String           @db.Uuid
+  respuesta         String
+  fecha_creacion    DateTime         @default(now()) @db.Timestamp(6)
+  mensajes          mensajes         @relation(fields: [mensaje_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_mensaje")
+  sesiones_tutoria  sesiones_tutoria @relation(fields: [sesion_tutoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_respuesta_sesion")
+}
+
+model resultados_aprendizaje {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competencia_id String       @db.Uuid
+  codigo         String       @unique @db.VarChar(50)
+  descripcion    String
+  nivel_esperado String?      @db.VarChar(50)
+  fecha_creacion DateTime     @default(now()) @db.Timestamp(6)
+  competencias   competencias @relation(fields: [competencia_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_resultado_competencia")
+}
+
+model reto_competencia {
+  reto_id        String       @db.Uuid
+  competencia_id String       @db.Uuid
+  fecha_creacion DateTime     @default(now()) @db.Timestamp(6)
+  competencias   competencias @relation(fields: [competencia_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reto_competencia_competencia")
+  retos          retos        @relation(fields: [reto_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reto_competencia_reto")
+
+  @@id([reto_id, competencia_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model retos {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tema_id             String   @db.Uuid
+  titulo              String   @db.VarChar(255)
+  descripcion         String
+  dificultad          String   @db.VarChar(20)
+  nivel_dificultad    Int?
+  activo              Boolean  @default(true)
+  fecha_creacion      DateTime @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime @default(now()) @db.Timestamp(6)
+  contenido           String?  @db.Text
+
+  intentos_reto    intentos_reto[]
+  reto_competencia reto_competencia[]
+  temas            temas              @relation(fields: [tema_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reto_tema")
+  sesiones_tutoria sesiones_tutoria[]
+}
+
+model roles {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre         String     @unique @db.VarChar(50)
+  descripcion    String?    @db.VarChar(255)
+  fecha_creacion DateTime   @default(now()) @db.Timestamp(6)
+  usuarios       usuarios[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sesiones_tutoria {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id            String                  @db.Uuid
+  reto_id               String                  @db.Uuid
+  estado                String                  @default("ACTIVA") @db.VarChar(20)
+  fecha_inicio          DateTime                @default(now()) @db.Timestamp(6)
+  fecha_fin             DateTime?               @db.Timestamp(6)
+  evaluaciones_facione  evaluaciones_facione[]
+  interacciones_ia      interacciones_ia[]
+  mensajes              mensajes[]
+  respuestas_estudiante respuestas_estudiante[]
+  retos                 retos                   @relation(fields: [reto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_reto")
+  usuarios              usuarios                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_usuario")
+}
+
+model temas {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materia_id          String   @db.Uuid
+  nombre              String   @db.VarChar(200)
+  descripcion         String?
+  fecha_creacion      DateTime @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime @default(now()) @db.Timestamp(6)
+  retos               retos[]
+  materias            materias @relation(fields: [materia_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tema_materia")
+}
+
+model usuarios {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rol_id              String             @db.Uuid
+  nombres             String             @db.VarChar(100)
+  apellidos           String             @db.VarChar(100)
+  correo              String             @unique(map: "uq_usuario_correo") @db.VarChar(254)
+  contrasena_hash     String
+  activo              Boolean            @default(true)
+  ultimo_acceso       DateTime?          @db.Timestamp(6)
+  fecha_creacion      DateTime           @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime           @default(now()) @db.Timestamp(6)
+  intentos_reto       intentos_reto[]
+  sesiones_tutoria    sesiones_tutoria[]
+  roles               roles              @relation(fields: [rol_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_rol")
+}
