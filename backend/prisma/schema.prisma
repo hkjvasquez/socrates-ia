@@ -137,21 +137,20 @@ model reto_competencia {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model retos {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tema_id             String   @db.Uuid
-  titulo              String   @db.VarChar(255)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tema_id             String             @db.Uuid
+  titulo              String             @db.VarChar(255)
   descripcion         String
-  dificultad          String   @db.VarChar(20)
+  dificultad          String             @db.VarChar(20)
   nivel_dificultad    Int?
-  activo              Boolean  @default(true)
-  fecha_creacion      DateTime @default(now()) @db.Timestamp(6)
-  fecha_actualizacion DateTime @default(now()) @db.Timestamp(6)
-  contenido           String?  @db.Text
-
-  intentos_reto    intentos_reto[]
-  reto_competencia reto_competencia[]
-  temas            temas              @relation(fields: [tema_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reto_tema")
-  sesiones_tutoria sesiones_tutoria[]
+  activo              Boolean            @default(true)
+  fecha_creacion      DateTime           @default(now()) @db.Timestamp(6)
+  fecha_actualizacion DateTime           @default(now()) @db.Timestamp(6)
+  contenido           String?
+  intentos_reto       intentos_reto[]
+  reto_competencia    reto_competencia[]
+  temas               temas              @relation(fields: [tema_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reto_tema")
+  sesiones_tutoria    sesiones_tutoria[]
 }
 
 model roles {
@@ -164,18 +163,20 @@ model roles {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model sesiones_tutoria {
-  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuario_id            String                  @db.Uuid
-  reto_id               String                  @db.Uuid
-  estado                String                  @default("ACTIVA") @db.VarChar(20)
-  fecha_inicio          DateTime                @default(now()) @db.Timestamp(6)
-  fecha_fin             DateTime?               @db.Timestamp(6)
-  evaluaciones_facione  evaluaciones_facione[]
-  interacciones_ia      interacciones_ia[]
-  mensajes              mensajes[]
-  respuestas_estudiante respuestas_estudiante[]
-  retos                 retos                   @relation(fields: [reto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_reto")
-  usuarios              usuarios                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_usuario")
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id             String                  @db.Uuid
+  reto_id                String                  @db.Uuid
+  estado                 String                  @default("ACTIVA") @db.VarChar(20)
+  fecha_inicio           DateTime                @default(now()) @db.Timestamp(6)
+  fecha_fin              DateTime?               @db.Timestamp(6)
+  nivel_ayuda            Int                     @default(1)
+  cantidad_interacciones Int                     @default(0)
+  evaluaciones_facione   evaluaciones_facione[]
+  interacciones_ia       interacciones_ia[]
+  mensajes               mensajes[]
+  respuestas_estudiante  respuestas_estudiante[]
+  retos                  retos                   @relation(fields: [reto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_reto")
+  usuarios               usuarios                @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sesion_usuario")
 }
 
 model temas {
