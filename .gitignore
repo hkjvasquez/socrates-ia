@@ -47,3 +47,8 @@ desktop.ini
 *.key
 *.p12
 *.pfx
+
+# Respaldos de PostgreSQL
+*.backup
+
+socrates_db_contenido.sql

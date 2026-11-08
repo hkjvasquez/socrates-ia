@@ -59,8 +59,17 @@ app.use(
     rutasRetos
 );
 
+
+
+// Ruta de verificación del servidor
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    exito: true,
+    mensaje: "Servidor de Sócrates IA funcionando correctamente"
+  });
+});
 const puerto =
-    process.env.PUERTO || 3000;
+    process.env.PORT || process.env.PUERTO || 3001;
 
 app.listen(
     puerto,
