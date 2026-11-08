@@ -7,12 +7,11 @@ import {
 
 interface MateriasProps {
     onSeleccionarMateria: (materia: Materia) => void;
-    onCerrarSesion: () => void;
 }
 
 export default function Materias({
     onSeleccionarMateria,
-    onCerrarSesion
+    
 }: MateriasProps) {
 
     const [materias, setMaterias] = useState<Materia[]>([]);
