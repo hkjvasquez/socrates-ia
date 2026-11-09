@@ -1,18 +1,45 @@
 
-import { useEffect, useRef, useState } from "react";
+import {
+    useEffect,
+    useRef,
+    useState,
+    type KeyboardEvent
+} from "react";
+
 import { preguntar } from "../servicios/servicioTutoria";
+import { finalizarSesion } from "../servicios/servicioSesiones";
 
 interface TutorProps {
     sesionId: string;
+    intentoId: string;
     retoTitulo: string;
     retoDescripcion?: string;
     onCambiarReto: () => void;
+    onRetoFinalizado: (sesionId: string) => void;
 }
 
 interface Mensaje {
     id: string;
     remitente: "ESTUDIANTE" | "IA";
     contenido: string;
+}
+
+interface EvaluacionFacione {
+    interpretacion: number;
+    analisis: number;
+    evaluacion: number;
+    inferencia: number;
+    explicacion: number;
+    autorregulacion: number;
+    observaciones: string;
+}
+
+interface RespuestaFinalizacion {
+    exito: boolean;
+    mensaje: string;
+    sesionId: string;
+    intentoId: string;
+    evaluacion: EvaluacionFacione;
 }
 
 const nivelesAyuda = {
@@ -38,14 +65,29 @@ const nivelesAyuda = {
 
 export default function Tutor({
     sesionId,
+    intentoId,
     retoTitulo,
     retoDescripcion,
-    onCambiarReto
+    onCambiarReto,
+    onRetoFinalizado
 }: TutorProps) {
+
+    // ==========================================
+    // ESTADOS
+    // ==========================================
 
     const [mensaje, setMensaje] = useState("");
     const [cargando, setCargando] = useState(false);
+    const [finalizando, setFinalizando] = useState(false);
+    const [retoFinalizado, setRetoFinalizado] = useState(false);
     const [nivelAyuda, setNivelAyuda] = useState(1);
+
+    const [puedeFinalizar, setPuedeFinalizar] = useState(false);
+    const [evidencias, setEvidencias] = useState<string[]>([]);
+    const [dimensionesObservadas, setDimensionesObservadas] =
+        useState<string[]>([]);
+
+    // IMPORTANTE: mensajes se declara antes de los useEffect.
 
     const [mensajes, setMensajes] = useState<Mensaje[]>([
         {
@@ -59,170 +101,335 @@ export default function Tutor({
     const finRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Obtener información del siguiente nivel
-    const siguienteNivel = nivelAyuda < 4
-        ? nivelesAyuda[(nivelAyuda + 1) as 2 | 3 | 4]
-        : null;
+    const siguienteNivel =
+        nivelAyuda < 4
+            ? nivelesAyuda[(nivelAyuda + 1) as 2 | 3 | 4]
+            : null;
 
-    // Scroll automático al último mensaje
+
+    // ==========================================
+    // ACTUALIZAR EVIDENCIAS DE APRENDIZAJE
+    // ==========================================
+
+    const actualizarEvaluacion = (resultado: any) => {
+
+        setPuedeFinalizar(
+            resultado?.puedeFinalizar === true
+        );
+
+        setEvidencias(
+            Array.isArray(resultado?.evidencias)
+                ? resultado.evidencias
+                : []
+        );
+
+        setDimensionesObservadas(
+            Array.isArray(resultado?.dimensionesObservadas)
+                ? resultado.dimensionesObservadas
+                : []
+        );
+
+    };
+
+
+    // ==========================================
+    // DESPLAZAMIENTO AUTOMÁTICO DEL CHAT
+    // ==========================================
+
     useEffect(() => {
+
         finRef.current?.scrollIntoView({
             behavior: "smooth",
             block: "end"
         });
-    }, [mensajes, cargando]);
 
-    // Textarea que crece según el contenido
+    }, [mensajes, cargando, finalizando]);
+
+
+    // ==========================================
+    // AJUSTAR ALTURA DEL ÁREA DE TEXTO
+    // ==========================================
+
     useEffect(() => {
+
         const el = textareaRef.current;
 
         if (!el) return;
 
         el.style.height = "auto";
-        el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+
+        el.style.height =
+            `${Math.min(el.scrollHeight, 160)}px`;
 
     }, [mensaje]);
 
-    // Enviar mensaje al tutor
+
+    // ==========================================
+    // AGREGAR MENSAJE AL CHAT
+    // ==========================================
+
+    const agregarMensaje = (
+        remitente: Mensaje["remitente"],
+        contenido: string
+    ) => {
+
+        setMensajes(prev => [
+            ...prev,
+            {
+                id: crypto.randomUUID(),
+                remitente,
+                contenido
+            }
+        ]);
+
+    };
+
+
+    // ==========================================
+    // ENVIAR MENSAJE
+    // ==========================================
+
     const enviarMensaje = async () => {
 
-        if (!mensaje.trim() || cargando) return;
+        if (
+            !mensaje.trim() ||
+            cargando ||
+            finalizando ||
+            retoFinalizado
+        ) {
+            return;
+        }
 
         const mensajeUsuario = mensaje.trim();
 
         setMensaje("");
         setCargando(true);
 
-        setMensajes((prev) => [
-            ...prev,
-            {
-                id: crypto.randomUUID(),
-                remitente: "ESTUDIANTE",
-                contenido: mensajeUsuario
-            }
-        ]);
+        agregarMensaje(
+            "ESTUDIANTE",
+            mensajeUsuario
+        );
 
         try {
 
             const respuesta = await preguntar({
+
                 sesionId,
+
+                intentoId,
+
                 mensaje: mensajeUsuario
+
             });
 
-            setMensajes((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    remitente: "IA",
-                    contenido:
-                        typeof respuesta?.respuesta === "string" &&
-                        respuesta.respuesta.trim()
-                            ? respuesta.respuesta
-                            : "No fue posible obtener una respuesta válida."
-                }
-            ]);
+            actualizarEvaluacion(respuesta);
+
+            agregarMensaje(
+                "IA",
+                typeof respuesta?.respuesta === "string" &&
+                respuesta.respuesta.trim()
+                    ? respuesta.respuesta
+                    : "No fue posible obtener una respuesta válida."
+            );
 
         } catch (error) {
 
-            console.error("Error enviando mensaje:", error);
+            console.error(
+                "Error enviando mensaje:",
+                error
+            );
 
-            setMensajes((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    remitente: "IA",
-                    contenido:
-                        "Ocurrió un error al comunicarse con Sócrates IA."
-                }
-            ]);
+            agregarMensaje(
+                "IA",
+                "Ocurrió un error al comunicarse con Sócrates IA. Verifica la conexión con el servidor e inténtalo nuevamente."
+            );
 
         } finally {
 
             setCargando(false);
+
             textareaRef.current?.focus();
 
         }
+
     };
 
-    // Solicitar siguiente nivel de ayuda
+
+    // ==========================================
+    // SOLICITAR SIGUIENTE NIVEL DE AYUDA
+    // ==========================================
+
     const solicitarNivelAyuda = async () => {
 
-        if (cargando || nivelAyuda >= 4) return;
+        if (
+            cargando ||
+            finalizando ||
+            retoFinalizado ||
+            nivelAyuda >= 4
+        ) {
+            return;
+        }
 
-        const siguienteNumero = (nivelAyuda + 1) as 2 | 3 | 4;
-        const solicitud = nivelesAyuda[siguienteNumero];
+        const siguienteNumero =
+            (nivelAyuda + 1) as 2 | 3 | 4;
+
+        const solicitud =
+            nivelesAyuda[siguienteNumero];
 
         setCargando(true);
 
-        setMensajes((prev) => [
-            ...prev,
-            {
-                id: crypto.randomUUID(),
-                remitente: "ESTUDIANTE",
-                contenido: solicitud.solicitud
-            }
-        ]);
+        agregarMensaje(
+            "ESTUDIANTE",
+            solicitud.solicitud
+        );
 
         try {
 
             const respuesta = await preguntar({
+
                 sesionId,
+
+                intentoId,
+
                 mensaje: solicitud.solicitud
+
             });
 
-            setMensajes((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    remitente: "IA",
-                    contenido:
-                        typeof respuesta?.respuesta === "string" &&
-                        respuesta.respuesta.trim()
-                            ? respuesta.respuesta
-                            : "No fue posible obtener una respuesta válida."
-                }
-            ]);
+            actualizarEvaluacion(respuesta);
+
+            agregarMensaje(
+                "IA",
+                typeof respuesta?.respuesta === "string" &&
+                respuesta.respuesta.trim()
+                    ? respuesta.respuesta
+                    : "No fue posible obtener una respuesta válida."
+            );
 
             setNivelAyuda(siguienteNumero);
 
         } catch (error) {
 
-            console.error("Error cambiando nivel de ayuda:", error);
+            console.error(
+                "Error cambiando nivel de ayuda:",
+                error
+            );
 
-            setMensajes((prev) => [
-                ...prev,
-                {
-                    id: crypto.randomUUID(),
-                    remitente: "IA",
-                    contenido:
-                        "No fue posible cambiar el nivel de ayuda. Inténtalo nuevamente."
-                }
-            ]);
+            agregarMensaje(
+                "IA",
+                "No fue posible cambiar el nivel de ayuda. Inténtalo nuevamente."
+            );
 
         } finally {
 
             setCargando(false);
 
         }
+
     };
 
-    // Enter para enviar y Shift + Enter para nueva línea
-    const manejarTecla = (
-        e: React.KeyboardEvent<HTMLTextAreaElement>
-    ) => {
 
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            enviarMensaje();
+    // ==========================================
+    // FINALIZAR RETO Y REDIRIGIR A RESULTADOS
+    // ==========================================
+
+    const manejarFinalizacion = async () => {
+
+        if (
+            !puedeFinalizar ||
+            cargando ||
+            finalizando ||
+            retoFinalizado
+        ) {
+            return;
+        }
+
+        const confirmar = window.confirm(
+            "¿Estás seguro de que deseas finalizar este reto? Sócrates IA evaluará tu razonamiento y generará tus resultados."
+        );
+
+        if (!confirmar) return;
+
+        setFinalizando(true);
+
+        try {
+
+            const resultado: RespuestaFinalizacion =
+                await finalizarSesion(sesionId);
+
+            if (
+                !resultado?.exito ||
+                !resultado.evaluacion
+            ) {
+
+                throw new Error(
+                    resultado?.mensaje ||
+                    "No se pudo finalizar el reto."
+                );
+
+            }
+
+            setRetoFinalizado(true);
+            setPuedeFinalizar(false);
+
+            // App.tsx abrirá el dashboard de resultados.
+
+            onRetoFinalizado(
+                resultado.sesionId || sesionId
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Error finalizando reto:",
+                error
+            );
+
+            agregarMensaje(
+                "IA",
+                error instanceof Error
+                    ? error.message
+                    : "No fue posible finalizar el reto. Inténtalo nuevamente."
+            );
+
+        } finally {
+
+            setFinalizando(false);
+
         }
 
     };
+
+
+    // ==========================================
+    // MANEJAR TECLA ENTER
+    // ==========================================
+
+    const manejarTecla = (
+        e: KeyboardEvent<HTMLTextAreaElement>
+    ) => {
+
+        if (
+            e.key === "Enter" &&
+            !e.shiftKey
+        ) {
+
+            e.preventDefault();
+
+            enviarMensaje();
+
+        }
+
+    };
+
+
+    // ==========================================
+    // INTERFAZ DEL TUTOR
+    // ==========================================
 
     return (
 
         <section className="chat">
 
-            {/* Cabecera */}
             <div className="chat-header">
 
                 <div className="chat-header-avatar">
@@ -230,26 +437,31 @@ export default function Tutor({
                 </div>
 
                 <div className="chat-header-identidad">
+
                     <h2>Sócrates IA</h2>
 
                     <span className="chat-estado">
-                        <i /> En línea
+                        <i />
+                        {retoFinalizado
+                            ? "Reto finalizado"
+                            : "En línea"}
                     </span>
+
                 </div>
 
-                {/* Control de nivel de ayuda */}
                 <div className="chat-header-acciones">
 
                     <div className="chat-ayuda-header">
 
-                        {siguienteNivel ? (
+                        {siguienteNivel && !retoFinalizado ? (
 
                             <button
                                 type="button"
                                 className="chat-ayuda-header-boton"
                                 onClick={solicitarNivelAyuda}
-                                disabled={cargando}
+                                disabled={cargando || finalizando}
                             >
+
                                 <span className="chat-ayuda-header-icono">
                                     {nivelAyuda === 1
                                         ? "💡"
@@ -259,6 +471,7 @@ export default function Tutor({
                                 </span>
 
                                 <span className="chat-ayuda-header-texto">
+
                                     <strong>
                                         {siguienteNivel.titulo}
                                     </strong>
@@ -266,21 +479,37 @@ export default function Tutor({
                                     <small>
                                         {siguienteNivel.descripcion}
                                     </small>
+
                                 </span>
 
                                 <span className="chat-ayuda-header-flecha">
                                     →
                                 </span>
+
                             </button>
 
                         ) : (
 
                             <div className="chat-ayuda-header-activa">
+
                                 <span>✦</span>
+
                                 <div>
-                                    <strong>Nivel 4 activo</strong>
-                                    <small>Acompañamiento guiado</small>
+
+                                    <strong>
+                                        {retoFinalizado
+                                            ? "Evaluación completada"
+                                            : "Nivel 4 activo"}
+                                    </strong>
+
+                                    <small>
+                                        {retoFinalizado
+                                            ? "Resultados disponibles"
+                                            : "Acompañamiento guiado"}
+                                    </small>
+
                                 </div>
+
                             </div>
 
                         )}
@@ -291,7 +520,7 @@ export default function Tutor({
                         type="button"
                         className="chat-cambiar-reto"
                         onClick={onCambiarReto}
-                        disabled={cargando}
+                        disabled={cargando || finalizando}
                     >
                         ← Cambiar de reto
                     </button>
@@ -300,7 +529,6 @@ export default function Tutor({
 
             </div>
 
-            {/* Lectura del reto */}
             <div className="chat-reto">
 
                 <div className="chat-reto-cabecera">
@@ -345,7 +573,6 @@ export default function Tutor({
 
             </div>
 
-            {/* Conversación */}
             <div className="chat-mensajes">
 
                 <div className="chat-mensajes-intro">
@@ -353,15 +580,119 @@ export default function Tutor({
                     <span>✦</span>
 
                     <div>
+
                         <strong>Diálogo socrático</strong>
+
                         <p>
                             Reflexiona, analiza y construye tus propias respuestas.
                         </p>
+
                     </div>
 
                 </div>
 
-                {mensajes.map((m) => (
+                {(dimensionesObservadas.length > 0 ||
+                    evidencias.length > 0 ||
+                    puedeFinalizar) && (
+
+                    <div className="chat-progreso">
+
+                        <div className="chat-progreso-cabecera">
+
+                            <span>✦</span>
+
+                            <div>
+
+                                <strong>
+                                    Progreso de tu razonamiento
+                                </strong>
+
+                                <p>
+                                    Sócrates IA está identificando las evidencias
+                                    de tu pensamiento crítico.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        {dimensionesObservadas.length > 0 && (
+
+                            <div className="chat-progreso-dimensiones">
+
+                                <strong>
+                                    Dimensiones observadas
+                                </strong>
+
+                                <div className="chat-progreso-etiquetas">
+
+                                    {dimensionesObservadas.map(
+                                        (dimension, index) => (
+
+                                            <span key={`${dimension}-${index}`}>
+                                                {dimension}
+                                            </span>
+
+                                        )
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+                        {evidencias.length > 0 && (
+
+                            <div className="chat-progreso-evidencias">
+
+                                <strong>
+                                    Evidencias identificadas
+                                </strong>
+
+                                <ul>
+
+                                    {evidencias.map((evidencia, index) => (
+
+                                        <li key={index}>
+                                            {evidencia}
+                                        </li>
+
+                                    ))}
+
+                                </ul>
+
+                            </div>
+
+                        )}
+
+                        {puedeFinalizar && !retoFinalizado && (
+
+                            <div className="chat-progreso-listo">
+
+                                <span>✓</span>
+
+                                <p>
+
+                                    <strong>
+                                        Has demostrado avances suficientes.
+                                    </strong>
+
+                                    <br />
+
+                                    Ya puedes finalizar el reto y obtener tu evaluación.
+
+                                </p>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                )}
+
+                {mensajes.map(m => (
 
                     <div
                         key={m.id}
@@ -373,9 +704,11 @@ export default function Tutor({
                     >
 
                         {m.remitente === "IA" && (
+
                             <div className="chat-avatar">
                                 ✦
                             </div>
+
                         )}
 
                         <div className="chat-burbuja">
@@ -404,41 +737,81 @@ export default function Tutor({
 
                 )}
 
+                {finalizando && (
+
+                    <div className="chat-fila es-ia">
+
+                        <div className="chat-avatar">
+                            ✦
+                        </div>
+
+                        <div className="chat-burbuja">
+                            Sócrates IA está evaluando tu razonamiento...
+                        </div>
+
+                    </div>
+
+                )}
+
                 <div ref={finRef} />
 
             </div>
 
-            {/* Entrada de mensajes */}
-            <div className="chat-entrada">
+            {!retoFinalizado && (
 
-                <div className="chat-caja">
+                <div className="chat-entrada">
 
-                    <textarea
-                        ref={textareaRef}
-                        value={mensaje}
-                        onChange={(e) => setMensaje(e.target.value)}
-                        onKeyDown={manejarTecla}
-                        placeholder="Escribe tu reflexión o respuesta..."
-                        rows={1}
-                        disabled={cargando}
-                    />
+                    {puedeFinalizar && (
 
-                    <button
-                        type="button"
-                        onClick={enviarMensaje}
-                        disabled={cargando || !mensaje.trim()}
-                        aria-label="Enviar mensaje"
-                    >
-                        ↑
-                    </button>
+                        <button
+                            type="button"
+                            className="chat-finalizar-reto"
+                            onClick={manejarFinalizacion}
+                            disabled={cargando || finalizando}
+                        >
+
+                            {finalizando
+                                ? "Evaluando tu razonamiento..."
+                                : "✓ Finalizar reto"}
+
+                        </button>
+
+                    )}
+
+                    <div className="chat-caja">
+
+                        <textarea
+                            ref={textareaRef}
+                            value={mensaje}
+                            onChange={e => setMensaje(e.target.value)}
+                            onKeyDown={manejarTecla}
+                            placeholder="Escribe tu reflexión o respuesta..."
+                            rows={1}
+                            disabled={cargando || finalizando}
+                        />
+
+                        <button
+                            type="button"
+                            onClick={enviarMensaje}
+                            disabled={
+                                cargando ||
+                                finalizando ||
+                                !mensaje.trim()
+                            }
+                            aria-label="Enviar mensaje"
+                        >
+                            ↑
+                        </button>
+
+                    </div>
+
+                    <p className="chat-ayuda">
+                        Enter para enviar · Shift + Enter para nueva línea
+                    </p>
 
                 </div>
 
-                <p className="chat-ayuda">
-                    Enter para enviar · Shift + Enter para nueva línea
-                </p>
-
-            </div>
+            )}
 
         </section>
 

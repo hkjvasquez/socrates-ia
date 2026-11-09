@@ -1,12 +1,11 @@
+
 const prisma =
     require("../configuracion/base-datos");
 
 class RepositorioSesiones {
 
-    async crear(
-        usuarioId,
-        retoId
-    ) {
+    // Crear sesión de tutoría
+    async crear(usuarioId, retoId) {
 
         return await prisma.sesiones_tutoria.create({
             data: {
@@ -17,26 +16,44 @@ class RepositorioSesiones {
 
     }
 
+    // Obtener sesión con información del reto
     async obtenerPorId(id) {
 
-    return await prisma.sesiones_tutoria.findUnique({
-        where: {
-            id
-        },
-        include: {
-            retos: {
-                include: {
-                    temas: {
-                        include: {
-                            materias: true
+        return await prisma.sesiones_tutoria.findUnique({
+            where: {
+                id
+            },
+            include: {
+                retos: {
+                    include: {
+                        temas: {
+                            include: {
+                                materias: true
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-}
+    }
+
+    // Finalizar sesión de tutoría
+    async finalizar(id) {
+
+        return await prisma.sesiones_tutoria.updateMany({
+            where: {
+                id,
+                estado: "ACTIVA"
+            },
+            data: {
+                estado: "FINALIZADA",
+                fecha_fin: new Date()
+            }
+        });
+
+    }
+
 }
 
 module.exports =

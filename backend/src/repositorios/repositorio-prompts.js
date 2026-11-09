@@ -1,15 +1,22 @@
+
 const prisma =
     require("../configuracion/base-datos");
 
 class RepositorioPrompts {
 
-    async obtenerPromptActivo() {
+    async obtenerPromptActivo(codigo) {
 
         return await prisma.prompts.findFirst({
+
             where: {
-                codigo: "SOCRATICO_V1",
+                codigo: codigo,
                 activo: true
+            },
+
+            orderBy: {
+                version: "desc"
             }
+
         });
 
     }

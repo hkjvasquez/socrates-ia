@@ -16,28 +16,38 @@ interface RetosProps {
     tema: Tema;
     usuarioId: string;
     onVolver: () => void;
+    onFinalizarReto: (sesionId: string) => void;
 }
 
 export default function Retos({
     tema,
-    usuarioId,
-    onVolver
+    onVolver,
+    onFinalizarReto
 }: RetosProps) {
 
     const [retos, setRetos] = useState<Reto[]>([]);
     const [sesionId, setSesionId] = useState<string | null>(null);
-    const [retoSeleccionado, setRetoSeleccionado] = useState<Reto | null>(null);
+    const [intentoId, setIntentoId] = useState<string | null>(null);
+
+    const [retoSeleccionado, setRetoSeleccionado] =
+        useState<Reto | null>(null);
 
     const [cargando, setCargando] = useState(true);
-    const [retoIniciandoId, setRetoIniciandoId] = useState<string | null>(null);
+
+    const [retoIniciandoId, setRetoIniciandoId] =
+        useState<string | null>(null);
 
     const [error, setError] = useState<string | null>(null);
 
-    // Resumir descripciones largas para las tarjetas
+
+    // ==========================================
+    // RESUMIR DESCRIPCIONES LARGAS
+    // ==========================================
+
     const resumirDescripcion = (
         descripcion: string,
         limite = 160
-    ) => {
+    ): string => {
 
         if (!descripcion) {
             return 'Prepárate para resolver este desafío.';
@@ -51,7 +61,11 @@ export default function Retos({
 
     };
 
-    // Cargar retos del tema seleccionado
+
+    // ==========================================
+    // CARGAR RETOS DEL TEMA
+    // ==========================================
+
     useEffect(() => {
 
         const cargarRetos = async () => {
@@ -61,15 +75,21 @@ export default function Retos({
                 setCargando(true);
                 setError(null);
 
-                const respuesta = await listarRetosPorTema(tema.id);
+                const respuesta =
+                    await listarRetosPorTema(tema.id);
 
                 setRetos(respuesta.retos || []);
 
             } catch (error) {
 
-                console.error('Error cargando retos:', error);
+                console.error(
+                    'Error cargando retos:',
+                    error
+                );
 
-                setError('No fue posible cargar los retos.');
+                setError(
+                    'No fue posible cargar los retos.'
+                );
 
             } finally {
 
@@ -83,7 +103,11 @@ export default function Retos({
 
     }, [tema.id]);
 
-    // Iniciar una sesión con el reto seleccionado
+
+    // ==========================================
+    // CREAR SESIÓN E INTENTO
+    // ==========================================
+
     const iniciarReto = async (reto: Reto) => {
 
         try {
@@ -91,25 +115,52 @@ export default function Retos({
             setRetoIniciandoId(reto.id);
             setError(null);
 
-            const respuesta = await crearSesion(
-                usuarioId,
-                reto.id
-            );
+            const respuesta =
+                await crearSesion(reto.id);
 
+            const nuevaSesionId =
+                respuesta.sesionId ??
+                respuesta.sesion?.id;
+
+            const nuevoIntentoId =
+                respuesta.intentoId ??
+                respuesta.sesion?.intentoId;
+
+            if (
+                respuesta.exito !== true ||
+                !nuevaSesionId ||
+                !nuevoIntentoId
+            ) {
+
+                console.error(
+                    'Respuesta del servidor:',
+                    respuesta
+                );
+
+                throw new Error(
+                    'El servidor no devolvió correctamente el ID de sesión o intento.'
+                );
+
+            }
+
+            setSesionId(nuevaSesionId);
+            setIntentoId(nuevoIntentoId);
             setRetoSeleccionado(reto);
-            setSesionId(respuesta.sesion.id);
 
-            console.log(
-                'Sesión creada correctamente:',
-                respuesta.sesion.id
-            );
+            console.log('Sesión:', nuevaSesionId);
+            console.log('Intento:', nuevoIntentoId);
 
         } catch (error) {
 
-            console.error('Error al crear sesión:', error);
+            console.error(
+                'Error al iniciar reto:',
+                error
+            );
 
             setError(
-                'No fue posible iniciar el reto. Intenta nuevamente.'
+                error instanceof Error
+                    ? error.message
+                    : 'No fue posible iniciar el reto.'
             );
 
         } finally {
@@ -120,17 +171,30 @@ export default function Retos({
 
     };
 
-    // Regresar a la selección de retos
+
+    // ==========================================
+    // REGRESAR A LA SELECCIÓN DE RETOS
+    // ==========================================
+
     const cambiarReto = () => {
 
         setSesionId(null);
+        setIntentoId(null);
         setRetoSeleccionado(null);
         setError(null);
 
     };
 
-    // Mostrar la conversación con el tutor
-    if (sesionId && retoSeleccionado) {
+
+    // ==========================================
+    // MOSTRAR TUTOR
+    // ==========================================
+
+    if (
+        sesionId !== null &&
+        intentoId !== null &&
+        retoSeleccionado !== null
+    ) {
 
         return (
 
@@ -152,9 +216,11 @@ export default function Retos({
 
                     <Tutor
                         sesionId={sesionId}
+                        intentoId={intentoId}
                         retoTitulo={retoSeleccionado.titulo}
                         retoDescripcion={retoSeleccionado.descripcion}
                         onCambiarReto={cambiarReto}
+                        onRetoFinalizado={onFinalizarReto}
                     />
 
                 </main>
@@ -164,6 +230,11 @@ export default function Retos({
         );
 
     }
+
+
+    // ==========================================
+    // MOSTRAR LISTADO DE RETOS
+    // ==========================================
 
     return (
 
@@ -199,7 +270,8 @@ export default function Retos({
                 </h1>
 
                 <p>
-                    Estás explorando los retos de <strong>{tema.nombre}</strong>.
+                    Estás explorando los retos de{' '}
+                    <strong>{tema.nombre}</strong>.
                     Selecciona uno para poner a prueba tus conocimientos,
                     cuestionar tus ideas y desarrollar tu razonamiento.
                 </p>
