@@ -1,6 +1,5 @@
 
-const prisma =
-    require("../configuracion/base-datos");
+const prisma = require("../configuracion/base-datos");
 
 class RepositorioEvaluacionFacione {
 
@@ -19,10 +18,11 @@ class RepositorioEvaluacionFacione {
             "autorregulacion"
         ];
 
+        // Validar puntuaciones de las seis dimensiones.
+
         for (const dimension of dimensiones) {
 
-            const puntuacion =
-                Number(datos[dimension]);
+            const puntuacion = Number(datos[dimension]);
 
             if (
                 !Number.isFinite(puntuacion) ||
@@ -37,6 +37,8 @@ class RepositorioEvaluacionFacione {
             }
 
         }
+
+        // Validar observaciones.
 
         if (
             typeof datos.observaciones !== "string" ||
@@ -112,11 +114,84 @@ class RepositorioEvaluacionFacione {
 
                 observaciones: true,
 
-                evaluado_por: true
+                evaluado_por: true,
+
+                fecha_creacion: true
 
             }
 
         });
+
+    }
+
+
+    // ==========================================
+    // CONSULTAR TODOS LOS RESULTADOS
+    // ==========================================
+
+    async listarTodos() {
+
+        return await prisma.$queryRaw`
+
+            SELECT
+
+                ef.id AS evaluacion_id,
+
+                ef.sesion_tutoria_id,
+
+                u.id AS estudiante_id,
+
+                u.nombres,
+
+                u.apellidos,
+
+                u.correo,
+
+                r.id AS reto_id,
+
+                r.titulo AS nombre_reto,
+
+                st.fecha_inicio,
+
+                st.fecha_fin,
+
+                st.estado,
+
+                ef.interpretacion,
+
+                ef.analisis,
+
+                ef.evaluacion,
+
+                ef.inferencia,
+
+                ef.explicacion,
+
+                ef.autorregulacion,
+
+                ef.observaciones,
+
+                ef.evaluado_por,
+
+                ef.fecha_creacion AS fecha_evaluacion
+
+            FROM evaluaciones_facione ef
+
+            INNER JOIN sesiones_tutoria st
+
+                ON ef.sesion_tutoria_id = st.id
+
+            INNER JOIN usuarios u
+
+                ON st.usuario_id = u.id
+
+            INNER JOIN retos r
+
+                ON st.reto_id = r.id
+
+            ORDER BY ef.fecha_creacion DESC
+
+        `;
 
     }
 
@@ -127,5 +202,4 @@ class RepositorioEvaluacionFacione {
 // EXPORTAR REPOSITORIO
 // ==========================================
 
-module.exports =
-    new RepositorioEvaluacionFacione();
+module.exports = new RepositorioEvaluacionFacione();

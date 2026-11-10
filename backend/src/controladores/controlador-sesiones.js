@@ -241,13 +241,35 @@ async function obtenerResultados(req, res) {
 
             sesionId: sesion.id,
 
+            fechaInicio: sesion.fecha_inicio,
+
+            fechaFinalizacion: sesion.fecha_fin,
+
+            estado: sesion.estado,
+
+            estudiante: {
+
+                id: sesion.usuarios.id,
+
+                nombres: sesion.usuarios.nombres,
+
+                apellidos: sesion.usuarios.apellidos,
+
+                correo: sesion.usuarios.correo
+
+            },
+
             reto: {
 
                 id: sesion.retos.id,
 
                 titulo: sesion.retos.titulo,
 
-                descripcion: sesion.retos.descripcion
+                descripcion: sesion.retos.descripcion,
+
+                tema: sesion.retos.temas.nombre,
+
+                materia: sesion.retos.temas.materias.nombre
 
             },
 

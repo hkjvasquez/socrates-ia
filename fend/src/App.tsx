@@ -7,6 +7,8 @@ import Temas from './paginas/temas';
 import Retos from './paginas/retos';
 import EvaluacionCognitiva from './paginas/evaluacionCognitiva';
 import Resultados from './paginas/Resultados';
+import GestionEstudiantes from './paginas/GestionEstudiantes';
+import ResultadosDocente from './paginas/ResultadosDocente';
 
 import type { UsuarioAutenticado } from './servicios/servicioAuth';
 import type { Materia } from './servicios/servicioMateria';
@@ -17,11 +19,23 @@ type Seccion =
     | 'materias'
     | 'evaluacion'
     | 'resultados'
+    | 'estudiantes'
+    | 'gestionMaterias'
     | 'progreso'
     | 'historial'
     | 'perfil';
 
+interface OpcionMenu {
+    id: Seccion;
+    icono: string;
+    nombre: string;
+}
+
 function App() {
+
+    // ==========================================
+    // USUARIO AUTENTICADO
+    // ==========================================
 
     const [usuario, setUsuario] = useState<UsuarioAutenticado | null>(() => {
 
@@ -41,9 +55,19 @@ function App() {
     const [temaSeleccionado, setTemaSeleccionado] =
         useState<Tema | null>(null);
 
-    // Conserva la última sesión finalizada.
     const [sesionResultadoId, setSesionResultadoId] =
         useState<string | null>(null);
+
+
+    // ==========================================
+    // IDENTIFICAR ROL
+    // ==========================================
+
+    const rolUsuario = usuario?.rol?.toUpperCase();
+
+    const esDocente = rolUsuario === 'DOCENTE';
+
+    const esEstudiante = rolUsuario === 'ESTUDIANTE';
 
 
     // ==========================================
@@ -65,17 +89,29 @@ function App() {
 
 
     // ==========================================
-    // NAVEGACIÓN PRINCIPAL
+    // NAVEGACIÓN SEGÚN EL ROL
     // ==========================================
 
     const navegar = (destino: Seccion) => {
 
+        // El estudiante no puede acceder a secciones docentes.
+        if (
+            esEstudiante &&
+            ['estudiantes', 'gestionMaterias'].includes(destino)
+        ) {
+            return;
+        }
+
+        // El docente no utiliza el flujo de tutoría del estudiante.
+        if (
+            esDocente &&
+            ['materias', 'evaluacion', 'progreso', 'historial'].includes(destino)
+        ) {
+            return;
+        }
+
         setMateriaSeleccionada(null);
         setTemaSeleccionado(null);
-
-        // No borrar sesionResultadoId.
-        // Se conserva la última evaluación para consultarla
-        // nuevamente desde el menú Mis resultados.
 
         setSeccion(destino);
 
@@ -103,7 +139,6 @@ function App() {
         setMateriaSeleccionada(null);
         setTemaSeleccionado(null);
 
-        // Conservamos la última evaluación.
         setSeccion('materias');
 
     };
@@ -123,14 +158,46 @@ function App() {
 
 
     // ==========================================
-    // OPCIONES DEL MENÚ
+    // VALIDAR ROL RECONOCIDO
     // ==========================================
 
-    const opcionesMenu: {
-        id: Seccion;
-        icono: string;
-        nombre: string;
-    }[] = [
+    if (!esDocente && !esEstudiante) {
+
+        return (
+
+            <main className="login-container">
+
+                <div className="login-card">
+
+                    <div className="login-logo">
+                        Sócrates <span>IA</span>
+                    </div>
+
+                    <h1>Acceso no autorizado</h1>
+
+                    <p>
+                        No se pudo reconocer el rol de tu usuario.
+                        Comunícate con el administrador del sistema.
+                    </p>
+
+                    <button onClick={cerrarSesion}>
+                        Cerrar sesión
+                    </button>
+
+                </div>
+
+            </main>
+
+        );
+
+    }
+
+
+    // ==========================================
+    // MENÚ DEL ESTUDIANTE
+    // ==========================================
+
+    const menuEstudiante: OpcionMenu[] = [
 
         { id: 'inicio', icono: '⌂', nombre: 'Inicio' },
 
@@ -138,15 +205,119 @@ function App() {
 
         { id: 'evaluacion', icono: '◈', nombre: 'Evaluación cognitiva' },
 
-        { id: 'resultados', icono: '◉', nombre: 'Mis resultados' },
-
-        { id: 'progreso', icono: '▥', nombre: 'Mi progreso' },
-
-        { id: 'historial', icono: '◷', nombre: 'Historial' },
-
         { id: 'perfil', icono: '♙', nombre: 'Mi perfil' }
 
     ];
+
+
+    // ==========================================
+    // MENÚ DEL DOCENTE
+    // ==========================================
+
+    const menuDocente: OpcionMenu[] = [
+
+        { id: 'inicio', icono: '⌂', nombre: 'Inicio' },
+
+        { id: 'estudiantes', icono: '♙', nombre: 'Estudiantes' },
+
+        { id: 'resultados', icono: '◉', nombre: 'Resultados académicos' },
+
+        { id: 'gestionMaterias', icono: '▤', nombre: 'Gestión académica' },
+
+        { id: 'perfil', icono: '⚙', nombre: 'Mi perfil' }
+
+    ];
+
+
+    const opcionesMenu = esDocente
+        ? menuDocente
+        : menuEstudiante;
+
+
+    // ==========================================
+    // PÁGINAS PENDIENTES DEL DOCENTE
+    // ==========================================
+
+    const mostrarPaginaDocente = () => {
+
+        const paginas: Partial<
+            Record<Seccion, { titulo: string; descripcion: string }>
+        > = {
+
+            estudiantes: {
+
+                titulo: 'Gestión de estudiantes',
+
+                descripcion:
+                    'Consulta los estudiantes registrados en Sócrates IA y realiza el seguimiento de su participación en las actividades de aprendizaje.'
+
+            },
+
+            resultados: {
+
+                titulo: 'Resultados académicos',
+
+                descripcion:
+                    'Consulta las evaluaciones de pensamiento crítico, las dimensiones de Facione y el desempeño de los estudiantes.'
+
+            },
+
+            gestionMaterias: {
+
+                titulo: 'Gestión académica',
+
+                descripcion:
+                    'Administra las materias, los temas y los retos que estarán disponibles para los estudiantes.'
+
+            },
+
+            perfil: {
+
+                titulo: 'Mi perfil',
+
+                descripcion:
+                    'Aquí podrás consultar y administrar tu información personal.'
+
+            }
+
+        };
+
+        const pagina = paginas[seccion];
+
+        if (!pagina) {
+            return null;
+        }
+
+        return (
+
+            <section className="menu-pagina">
+
+                <span className="menu-etiqueta">
+                    ESPACIO DEL DOCENTE
+                </span>
+
+                <h1>{pagina.titulo}</h1>
+
+                <p>{pagina.descripcion}</p>
+
+                <div className="menu-construccion">
+
+                    <span>✦</span>
+
+                    <h2>Espacio en preparación</h2>
+
+                    <p>
+                        Este módulo se implementará en la siguiente
+                        etapa de desarrollo de Sócrates IA.
+                    </p>
+
+                </div>
+
+            </section>
+
+        );
+
+    };
 
 
     // ==========================================
@@ -156,10 +327,133 @@ function App() {
     const mostrarContenido = () => {
 
         // --------------------------------------
-        // MIS RESULTADOS
+        // INICIO DEL DOCENTE
+        // --------------------------------------
+
+        if (esDocente && seccion === 'inicio') {
+
+            return (
+
+                <section className="menu-inicio">
+
+                    <span className="menu-etiqueta">
+                        ESPACIO DE GESTIÓN DOCENTE
+                    </span>
+
+                    <h1>
+                        ¡Bienvenido a Sócrates IA!
+                    </h1>
+
+                    <p>
+                        Supervisa el aprendizaje, consulta los resultados
+                        y acompaña el desarrollo del pensamiento crítico
+                        de tus estudiantes.
+                    </p>
+
+                    <div className="menu-inicio-tarjeta">
+
+                        <div>
+
+                            <span className="menu-tarjeta-icono">
+                                ✦
+                            </span>
+
+                            <h2>Panel del docente</h2>
+
+                            <p>
+                                Accede a la información académica y
+                                próximamente podrás consultar el avance
+                                de tus estudiantes.
+                            </p>
+
+                        </div>
+
+                        <button
+                            className="menu-boton-principal"
+                            onClick={() => navegar('estudiantes')}
+                        >
+                            Consultar estudiantes →
+                        </button>
+
+                    </div>
+
+                </section>
+
+            );
+
+        }
+
+
+        // --------------------------------------
+        // INICIO DEL ESTUDIANTE
+        // --------------------------------------
+
+        if (esEstudiante && seccion === 'inicio') {
+
+            return (
+
+                <section className="menu-inicio">
+
+                    <span className="menu-etiqueta">
+                        TU ESPACIO DE APRENDIZAJE
+                    </span>
+
+                    <h1>
+                        ¡Bienvenido a Sócrates IA!
+                    </h1>
+
+                    <p>
+                        Aprende, cuestiona tus ideas y desarrolla
+                        tu pensamiento crítico mediante el diálogo.
+                    </p>
+
+                    <div className="menu-inicio-tarjeta">
+
+                        <div>
+
+                            <span className="menu-tarjeta-icono">
+                                ✦
+                            </span>
+
+                            <h2>Comienza a aprender</h2>
+
+                            <p>
+                                Explora tus materias, descubre nuevos temas
+                                y resuelve desafíos con tu tutor inteligente.
+                            </p>
+
+                        </div>
+
+                        <button
+                            className="menu-boton-principal"
+                            onClick={() => navegar('materias')}
+                        >
+                            Explorar materias →
+                        </button>
+
+                    </div>
+
+                </section>
+
+            );
+
+        }
+
+
+        // --------------------------------------
+        // RESULTADOS
         // --------------------------------------
 
         if (seccion === 'resultados') {
+
+            // El docente consulta todos los resultados académicos.
+
+            if (esDocente) {
+                return <ResultadosDocente />;
+            }
+
+            // El estudiante consulta su evaluación
+            // inmediatamente después de finalizar el reto.
 
             if (!sesionResultadoId) {
 
@@ -171,13 +465,7 @@ function App() {
                             SÓCRATES IA
                         </span>
 
-                        <h1>Mis resultados</h1>
-
-                        <p>
-                            Aquí podrás consultar los resultados de tus
-                            evaluaciones y conocer el desarrollo de tus
-                            habilidades de pensamiento crítico.
-                        </p>
+                        <h1>Resultados</h1>
 
                         <div className="menu-construccion">
 
@@ -186,9 +474,8 @@ function App() {
                             <h2>Aún no tienes resultados</h2>
 
                             <p>
-                                Cuando finalices tu primer reto con
-                                Sócrates IA, tu evaluación aparecerá
-                                en este espacio.
+                                Cuando finalices un reto con Sócrates IA,
+                                tu evaluación aparecerá en este espacio.
                             </p>
 
                             <button
@@ -219,7 +506,20 @@ function App() {
 
 
         // --------------------------------------
-        // MATERIAS, TEMAS Y RETOS
+        // ESPACIOS DEL DOCENTE
+        // --------------------------------------
+
+        if (esDocente) {
+            if (seccion === 'estudiantes') {
+                return <GestionEstudiantes />;
+            }
+
+            return mostrarPaginaDocente();
+        }
+
+
+        // --------------------------------------
+        // MATERIAS, TEMAS Y RETOS DEL ESTUDIANTE
         // --------------------------------------
 
         if (seccion === 'materias') {
@@ -276,90 +576,12 @@ function App() {
 
 
         // --------------------------------------
-        // INICIO
+        // PÁGINAS PENDIENTES DEL ESTUDIANTE
         // --------------------------------------
 
-        if (seccion === 'inicio') {
-
-            return (
-
-                <section className="menu-inicio">
-
-                    <span className="menu-etiqueta">
-                        TU ESPACIO DE APRENDIZAJE
-                    </span>
-
-                    <h1>
-                        ¡Bienvenido a Sócrates IA!
-                    </h1>
-
-                    <p>
-                        Aprende, cuestiona tus ideas y desarrolla
-                        tu pensamiento crítico mediante el diálogo.
-                    </p>
-
-                    <div className="menu-inicio-tarjeta">
-
-                        <div>
-
-                            <span className="menu-tarjeta-icono">
-                                ✦
-                            </span>
-
-                            <h2>Comienza a aprender</h2>
-
-                            <p>
-                                Explora tus materias, descubre nuevos temas
-                                y resuelve desafíos con tu tutor inteligente.
-                            </p>
-
-                        </div>
-
-                        <button
-                            className="menu-boton-principal"
-                            onClick={() => navegar('materias')}
-                        >
-                            Explorar materias →
-                        </button>
-
-                    </div>
-
-                </section>
-
-            );
-
-        }
-
-
-        // --------------------------------------
-        // PÁGINAS EN CONSTRUCCIÓN
-        // --------------------------------------
-
-        const paginas: Record<
-            Exclude<
-                Seccion,
-                'inicio' | 'materias' | 'evaluacion' | 'resultados'
-            >,
-            { titulo: string; descripcion: string }
+        const paginasEstudiante: Partial<
+            Record<Seccion, { titulo: string; descripcion: string }>
         > = {
-
-            progreso: {
-
-                titulo: 'Mi progreso',
-
-                descripcion:
-                    'Aquí podrás visualizar tu avance de aprendizaje y el desarrollo de tus habilidades.'
-
-            },
-
-            historial: {
-
-                titulo: 'Historial de aprendizaje',
-
-                descripcion:
-                    'Aquí podrás consultar tus sesiones de tutoría y las actividades que has realizado.'
-
-            },
 
             perfil: {
 
@@ -372,7 +594,11 @@ function App() {
 
         };
 
-        const pagina = paginas[seccion];
+        const pagina = paginasEstudiante[seccion];
+
+        if (!pagina) {
+            return null;
+        }
 
         return (
 
@@ -429,7 +655,7 @@ function App() {
                 <div className="menu-separador" />
 
                 <span className="menu-seccion-titulo">
-                    MENÚ PRINCIPAL
+                    {esDocente ? 'MENÚ DOCENTE' : 'MENÚ PRINCIPAL'}
                 </span>
 
                 <nav className="menu-navegacion">
@@ -468,7 +694,7 @@ function App() {
 
                         <div className="menu-avatar">
 
-                            {(usuario.nombres || 'E')
+                            {(usuario.nombres || 'U')
                                 .charAt(0)
                                 .toUpperCase()}
 
@@ -480,7 +706,9 @@ function App() {
                                 {usuario.nombres}
                             </strong>
 
-                            <span>Estudiante</span>
+                            <span>
+                                {esDocente ? 'Docente' : 'Estudiante'}
+                            </span>
 
                         </div>
 

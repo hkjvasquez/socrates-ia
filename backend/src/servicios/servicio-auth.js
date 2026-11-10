@@ -62,7 +62,7 @@ class ServicioAuth {
         await repositorioAuth.actualizarUltimoAcceso(
             usuario.id
         );
-
+console.log("ROL DEL USUARIO:", usuario.roles?.nombre);
         // Preparar respuesta sin contraseña
         const usuarioRespuesta = {
             id: usuario.id,

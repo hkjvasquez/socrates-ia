@@ -1,10 +1,10 @@
-
-const prisma =
-    require("../configuracion/base-datos");
+const prisma = require("../configuracion/base-datos");
 
 class RepositorioSesiones {
 
-    // Crear sesión de tutoría
+    // ==========================================
+    // CREAR SESIÓN DE TUTORÍA
+    // ==========================================
     async crear(usuarioId, retoId) {
 
         return await prisma.sesiones_tutoria.create({
@@ -16,14 +16,30 @@ class RepositorioSesiones {
 
     }
 
-    // Obtener sesión con información del reto
+    // ==========================================
+    // OBTENER SESIÓN POR IDENTIFICADOR
+    // ==========================================
     async obtenerPorId(id) {
 
         return await prisma.sesiones_tutoria.findUnique({
+
             where: {
-                id
+                id: id
             },
+
             include: {
+
+                // Información del estudiante
+                usuarios: {
+                    select: {
+                        id: true,
+                        nombres: true,
+                        apellidos: true,
+                        correo: true
+                    }
+                },
+
+                // Información del reto y su contexto académico
                 retos: {
                     include: {
                         temas: {
@@ -33,28 +49,34 @@ class RepositorioSesiones {
                         }
                     }
                 }
+
             }
+
         });
 
     }
 
-    // Finalizar sesión de tutoría
+    // ==========================================
+    // FINALIZAR SESIÓN
+    // ==========================================
     async finalizar(id) {
 
         return await prisma.sesiones_tutoria.updateMany({
+
             where: {
-                id,
+                id: id,
                 estado: "ACTIVA"
             },
+
             data: {
                 estado: "FINALIZADA",
                 fecha_fin: new Date()
             }
+
         });
 
     }
 
 }
 
-module.exports =
-    new RepositorioSesiones();
+module.exports = new RepositorioSesiones();

@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const express = require("express");
@@ -27,6 +28,9 @@ const rutasTemas =
 
 const rutasRetos =
     require("./rutas/rutas-retos");
+
+const rutasResultados =
+    require("./rutas/rutas-resultado");
 
 app.use(
     "/api/tutoria",
@@ -59,6 +63,10 @@ app.use(
     rutasRetos
 );
 
+app.use(
+    "/api/resultado",
+    rutasResultados
+);
 
 
 // Ruta de verificación del servidor
