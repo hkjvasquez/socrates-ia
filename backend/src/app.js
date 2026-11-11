@@ -32,6 +32,11 @@ const rutasRetos =
 const rutasResultados =
     require("./rutas/rutas-resultado");
 
+// Nueva ruta de usuarios
+const rutasUsuarios =
+    require("./rutas/rutas-usuarios");
+
+
 app.use(
     "/api/tutoria",
     rutasTutoria
@@ -52,7 +57,6 @@ app.use(
     rutasTemas
 );
 
-
 app.use(
     "/api/auth",
     rutasAuth
@@ -68,14 +72,21 @@ app.use(
     rutasResultados
 );
 
+// Registrar ruta de usuarios
+app.use(
+    "/api/usuarios",
+    rutasUsuarios
+);
+
 
 // Ruta de verificación del servidor
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    exito: true,
-    mensaje: "Servidor de Sócrates IA funcionando correctamente"
-  });
+    res.status(200).json({
+        exito: true,
+        mensaje: "Servidor de Sócrates IA funcionando correctamente"
+    });
 });
+
 const puerto =
     process.env.PORT || process.env.PUERTO || 3001;
 
