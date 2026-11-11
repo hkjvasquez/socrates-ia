@@ -4,7 +4,6 @@ import './resultados.css';
 import type { EvaluacionFacione } from '../servicios/servicioResultados';
 
 interface ResultadosProps {
-    sesionId: string;
     evaluacion: EvaluacionFacione;
     retoTitulo: string;
     retoDescripcion: string;
@@ -68,7 +67,6 @@ const dimensiones: DimensionFacione[] = [
 function convertirPuntuacion(
     valor: number | string | null | undefined
 ): number {
-
     const numero = Number(valor);
 
     if (!Number.isFinite(numero)) {
@@ -76,11 +74,9 @@ function convertirPuntuacion(
     }
 
     return Math.min(100, Math.max(0, numero));
-
 }
 
 function obtenerNivel(puntuacion: number): string {
-
     if (puntuacion >= 80) return 'Alto';
 
     if (puntuacion >= 60) return 'En desarrollo';
@@ -88,11 +84,9 @@ function obtenerNivel(puntuacion: number): string {
     if (puntuacion >= 1) return 'Inicial';
 
     return 'Sin evidencia suficiente';
-
 }
 
 export default function Resultados({
-    sesionId,
     evaluacion,
     retoTitulo,
     retoDescripcion,
@@ -104,13 +98,9 @@ export default function Resultados({
     // ==========================================
 
     if (!evaluacion) {
-
         return (
-
             <section className="resultados-pagina">
-
                 <div className="resultados-error">
-
                     <span className="resultados-error-icono">!</span>
 
                     <h1>No hay una evaluación disponible</h1>
@@ -126,28 +116,20 @@ export default function Resultados({
                     >
                         Volver a materias
                     </button>
-
                 </div>
-
             </section>
-
         );
-
     }
-
 
     // ==========================================
     // RESULTADOS
     // ==========================================
 
     return (
-
         <section className="resultados-pagina">
 
             <header className="resultados-encabezado">
-
                 <div>
-
                     <span className="resultados-etiqueta">
                         SÓCRATES IA · EVALUACIÓN COGNITIVA
                     </span>
@@ -160,27 +142,22 @@ export default function Resultados({
                         Conoce las habilidades de pensamiento crítico
                         que demostraste durante el reto.
                     </p>
-
                 </div>
 
                 <div className="resultados-insignia">
                     <span>✦</span>
                     <small>RETO COMPLETADO</small>
                 </div>
-
             </header>
-
 
             {/* INFORMACIÓN DEL RETO */}
 
             <article className="resultados-reto">
-
                 <div className="resultados-reto-icono">
                     ◈
                 </div>
 
                 <div>
-
                     <span>RETO REALIZADO</span>
 
                     <h2>
@@ -190,18 +167,13 @@ export default function Resultados({
                     {retoDescripcion && (
                         <p>{retoDescripcion}</p>
                     )}
-
                 </div>
-
             </article>
-
 
             {/* DIMENSIONES DE FACIONE */}
 
             <div className="resultados-seccion-encabezado">
-
                 <div>
-
                     <span className="resultados-etiqueta">
                         MODELO DE PENSAMIENTO CRÍTICO
                     </span>
@@ -214,29 +186,21 @@ export default function Resultados({
                         Valoración basada en las evidencias identificadas
                         durante tu conversación con el tutor.
                     </p>
-
                 </div>
-
             </div>
 
-
             <div className="resultados-grid">
-
                 {dimensiones.map((dimension) => {
-
                     const puntuacion = convertirPuntuacion(
                         evaluacion[dimension.clave]
                     );
 
                     return (
-
                         <article
                             className="resultados-dimension"
                             key={dimension.clave}
                         >
-
                             <div className="resultados-dimension-superior">
-
                                 <div className="resultados-dimension-icono">
                                     {dimension.icono}
                                 </div>
@@ -244,7 +208,6 @@ export default function Resultados({
                                 <span className="resultados-dimension-nivel">
                                     {obtenerNivel(puntuacion)}
                                 </span>
-
                             </div>
 
                             <h3>
@@ -256,13 +219,11 @@ export default function Resultados({
                             </p>
 
                             <div className="resultados-puntuacion">
-
                                 <strong>
                                     {puntuacion.toFixed(0)}
                                 </strong>
 
                                 <span>/ 100</span>
-
                             </div>
 
                             <div
@@ -273,35 +234,26 @@ export default function Resultados({
                                 aria-valuemax={100}
                                 aria-valuenow={puntuacion}
                             >
-
                                 <div
                                     className="resultados-barra-progreso"
                                     style={{
                                         width: `${puntuacion}%`
                                     }}
                                 />
-
                             </div>
-
                         </article>
-
                     );
-
                 })}
-
             </div>
-
 
             {/* OBSERVACIONES DE LA IA */}
 
             <article className="resultados-observaciones">
-
                 <div className="resultados-observaciones-icono">
                     ✦
                 </div>
 
                 <div>
-
                     <span className="resultados-etiqueta">
                         RETROALIMENTACIÓN PERSONALIZADA
                     </span>
@@ -314,25 +266,19 @@ export default function Resultados({
                         {evaluacion.observaciones ||
                             'No se registraron observaciones para esta evaluación.'}
                     </p>
-
                 </div>
-
             </article>
-
 
             {/* PIE DE PÁGINA */}
 
             <footer className="resultados-pie">
-
                 <div>
-
                     <span>Tu aprendizaje continúa.</span>
 
                     <p>
                         Cada desafío es una oportunidad para fortalecer
                         tu pensamiento y mejorar tu razonamiento.
                     </p>
-
                 </div>
 
                 <button
@@ -341,11 +287,8 @@ export default function Resultados({
                 >
                     Volver a materias →
                 </button>
-
             </footer>
 
         </section>
-
     );
-
 }
