@@ -546,7 +546,6 @@ function App() {
             return (
 
                 <Resultados
-                    sesionId={resultadoTemporal.sesionId}
                     evaluacion={resultadoTemporal.evaluacion}
                     retoTitulo={resultadoTemporal.retoTitulo}
                     retoDescripcion={resultadoTemporal.retoDescripcion}
