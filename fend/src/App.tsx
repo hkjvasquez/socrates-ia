@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import Login from './paginas/Login';
 import Materias from './paginas/materias';
@@ -13,6 +13,7 @@ import ResultadosDocente from './paginas/ResultadosDocente';
 import type { UsuarioAutenticado } from './servicios/servicioAuth';
 import type { Materia } from './servicios/servicioMateria';
 import type { Tema } from './paginas/temas';
+import type { EvaluacionFacione } from './servicios/servicioResultados';
 
 type Seccion =
     | 'inicio'
@@ -29,6 +30,14 @@ interface OpcionMenu {
     id: Seccion;
     icono: string;
     nombre: string;
+}
+
+// Resultado temporal generado al finalizar un reto.
+interface ResultadoRetoFinalizado {
+    sesionId: string;
+    evaluacion: EvaluacionFacione;
+    retoTitulo: string;
+    retoDescripcion: string;
 }
 
 function App() {
@@ -55,8 +64,32 @@ function App() {
     const [temaSeleccionado, setTemaSeleccionado] =
         useState<Tema | null>(null);
 
-    const [sesionResultadoId, setSesionResultadoId] =
+    // Resultado temporal del estudiante.
+    const [resultadoTemporal, setResultadoTemporal] =
+        useState<ResultadoRetoFinalizado | null>(null);
+
+    // Notificación de éxito.
+    const [notificacion, setNotificacion] =
         useState<string | null>(null);
+
+
+    // ==========================================
+    // OCULTAR NOTIFICACIÓN AUTOMÁTICAMENTE
+    // ==========================================
+
+    useEffect(() => {
+
+        if (!notificacion) return;
+
+        const temporizador = window.setTimeout(() => {
+            setNotificacion(null);
+        }, 4000);
+
+        return () => {
+            window.clearTimeout(temporizador);
+        };
+
+    }, [notificacion]);
 
 
     // ==========================================
@@ -82,7 +115,11 @@ function App() {
         setUsuario(null);
         setMateriaSeleccionada(null);
         setTemaSeleccionado(null);
-        setSesionResultadoId(null);
+
+        // Los resultados temporales se eliminan al cerrar sesión.
+        setResultadoTemporal(null);
+
+        setNotificacion(null);
         setSeccion('inicio');
 
     };
@@ -122,10 +159,24 @@ function App() {
     // FINALIZACIÓN DEL RETO
     // ==========================================
 
-    const manejarRetoFinalizado = (sesionId: string) => {
+    const manejarRetoFinalizado = (
+        resultado: ResultadoRetoFinalizado
+    ) => {
 
-        setSesionResultadoId(sesionId);
+        // Guardar la evaluación recibida directamente del tutor.
+        setResultadoTemporal(resultado);
+
+        // Limpiar la selección del reto actual.
+        setMateriaSeleccionada(null);
+        setTemaSeleccionado(null);
+
+        // Redirigir a la página de resultados.
         setSeccion('resultados');
+
+        // Mostrar notificación de éxito.
+        setNotificacion(
+            'Tu reto ha finalizado correctamente. Tu evaluación está lista.'
+        );
 
     };
 
@@ -139,7 +190,7 @@ function App() {
         setMateriaSeleccionada(null);
         setTemaSeleccionado(null);
 
-        setSeccion('materias');
+        setSeccion('inicio');
 
     };
 
@@ -203,6 +254,8 @@ function App() {
 
         { id: 'materias', icono: '▤', nombre: 'Materias' },
 
+        { id: 'resultados', icono: '◉', nombre: 'Mis resultados' },
+
         { id: 'evaluacion', icono: '◈', nombre: 'Evaluación cognitiva' },
 
         { id: 'perfil', icono: '♙', nombre: 'Mi perfil' }
@@ -235,7 +288,7 @@ function App() {
 
 
     // ==========================================
-    // PÁGINAS PENDIENTES DEL DOCENTE
+    // PÁGINAS DEL DOCENTE
     // ==========================================
 
     const mostrarPaginaDocente = () => {
@@ -446,16 +499,13 @@ function App() {
 
         if (seccion === 'resultados') {
 
-            // El docente consulta todos los resultados académicos.
-
+            // El docente conserva su consulta persistente a la BD.
             if (esDocente) {
                 return <ResultadosDocente />;
             }
 
-            // El estudiante consulta su evaluación
-            // inmediatamente después de finalizar el reto.
-
-            if (!sesionResultadoId) {
+            // El estudiante consulta su resultado temporal.
+            if (!resultadoTemporal) {
 
                 return (
 
@@ -465,7 +515,7 @@ function App() {
                             SÓCRATES IA
                         </span>
 
-                        <h1>Resultados</h1>
+                        <h1>Mis resultados</h1>
 
                         <div className="menu-construccion">
 
@@ -496,7 +546,10 @@ function App() {
             return (
 
                 <Resultados
-                    sesionId={sesionResultadoId}
+                    sesionId={resultadoTemporal.sesionId}
+                    evaluacion={resultadoTemporal.evaluacion}
+                    retoTitulo={resultadoTemporal.retoTitulo}
+                    retoDescripcion={resultadoTemporal.retoDescripcion}
                     onVolver={volverDesdeResultados}
                 />
 
@@ -510,11 +563,13 @@ function App() {
         // --------------------------------------
 
         if (esDocente) {
+
             if (seccion === 'estudiantes') {
                 return <GestionEstudiantes />;
             }
 
             return mostrarPaginaDocente();
+
         }
 
 
@@ -576,7 +631,7 @@ function App() {
 
 
         // --------------------------------------
-        // PÁGINAS PENDIENTES DEL ESTUDIANTE
+        // PÁGINAS DEL ESTUDIANTE
         // --------------------------------------
 
         const paginasEstudiante: Partial<
@@ -639,6 +694,96 @@ function App() {
     return (
 
         <div className="socrates-layout">
+
+            {/* NOTIFICACIÓN DE ÉXITO */}
+
+            {notificacion && (
+
+                <div
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                        position: 'fixed',
+                        top: '24px',
+                        right: '24px',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '13px',
+                        width: 'min(390px, calc(100vw - 32px))',
+                        padding: '16px 18px',
+                        background: '#F0FDF4',
+                        border: '1px solid #BBF7D0',
+                        borderRadius: '14px',
+                        boxShadow: '0 10px 35px rgba(0, 0, 0, 0.12)',
+                        color: '#166534'
+                    }}
+                >
+
+                    <div
+                        style={{
+                            width: '38px',
+                            height: '38px',
+                            minWidth: '38px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#DCFCE7',
+                            borderRadius: '50%',
+                            fontSize: '21px',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        ✓
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+
+                        <strong
+                            style={{
+                                display: 'block',
+                                fontSize: '14px',
+                                marginBottom: '4px'
+                            }}
+                        >
+                            ¡Reto finalizado con éxito!
+                        </strong>
+
+                        <span
+                            style={{
+                                display: 'block',
+                                fontSize: '13px',
+                                lineHeight: 1.5
+                            }}
+                        >
+                            {notificacion}
+                        </span>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setNotificacion(null)}
+                        aria-label="Cerrar notificación"
+                        style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#166534',
+                            fontSize: '20px',
+                            cursor: 'pointer',
+                            padding: '2px 5px',
+                            alignSelf: 'flex-start'
+                        }}
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+            )}
+
+
+            {/* MENÚ LATERAL */}
 
             <aside className="menu-sidebar">
 
@@ -728,6 +873,9 @@ function App() {
                 </div>
 
             </aside>
+
+
+            {/* CONTENIDO PRINCIPAL */}
 
             <main className="menu-contenido">
 

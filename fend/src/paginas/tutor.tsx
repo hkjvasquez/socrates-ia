@@ -9,21 +9,6 @@ import {
 import { preguntar } from "../servicios/servicioTutoria";
 import { finalizarSesion } from "../servicios/servicioSesiones";
 
-interface TutorProps {
-    sesionId: string;
-    intentoId: string;
-    retoTitulo: string;
-    retoDescripcion?: string;
-    onCambiarReto: () => void;
-    onRetoFinalizado: (sesionId: string) => void;
-}
-
-interface Mensaje {
-    id: string;
-    remitente: "ESTUDIANTE" | "IA";
-    contenido: string;
-}
-
 interface EvaluacionFacione {
     interpretacion: number;
     analisis: number;
@@ -32,6 +17,24 @@ interface EvaluacionFacione {
     explicacion: number;
     autorregulacion: number;
     observaciones: string;
+}
+
+interface TutorProps {
+    sesionId: string;
+    intentoId: string;
+    retoTitulo: string;
+    retoDescripcion?: string;
+    onCambiarReto: () => void;
+    onRetoFinalizado: (resultado: {
+        sesionId: string;
+        evaluacion: EvaluacionFacione;
+    }) => void;
+}
+
+interface Mensaje {
+    id: string;
+    remitente: "ESTUDIANTE" | "IA";
+    contenido: string;
 }
 
 interface RespuestaFinalizacion {
@@ -371,11 +374,13 @@ export default function Tutor({
             setRetoFinalizado(true);
             setPuedeFinalizar(false);
 
-            // App.tsx abrirá el dashboard de resultados.
+            // Enviamos a App.tsx el ID de sesión
+            // y la evaluación generada por el backend.
 
-            onRetoFinalizado(
-                resultado.sesionId || sesionId
-            );
+            onRetoFinalizado({
+                sesionId: resultado.sesionId || sesionId,
+                evaluacion: resultado.evaluacion
+            });
 
         } catch (error) {
 

@@ -8,15 +8,24 @@ import {
 
 import { crearSesion } from '../servicios/servicioSesiones';
 
+import type { EvaluacionFacione } from '../servicios/servicioResultados';
+
 import type { Tema } from './temas';
 
 import Tutor from './tutor';
+
+interface ResultadoRetoFinalizado {
+    sesionId: string;
+    evaluacion: EvaluacionFacione;
+    retoTitulo: string;
+    retoDescripcion: string;
+}
 
 interface RetosProps {
     tema: Tema;
     usuarioId: string;
     onVolver: () => void;
-    onFinalizarReto: (sesionId: string) => void;
+    onFinalizarReto: (resultado: ResultadoRetoFinalizado) => void;
 }
 
 export default function Retos({
@@ -173,6 +182,37 @@ export default function Retos({
 
 
     // ==========================================
+    // RECIBIR RESULTADO DEL TUTOR
+    // ==========================================
+
+    const manejarRetoFinalizado = (resultado: {
+        sesionId: string;
+        evaluacion: EvaluacionFacione;
+    }) => {
+
+        if (!retoSeleccionado) {
+            console.error(
+                'No se encontró el reto asociado al resultado.'
+            );
+            return;
+        }
+
+        onFinalizarReto({
+
+            sesionId: resultado.sesionId,
+
+            evaluacion: resultado.evaluacion,
+
+            retoTitulo: retoSeleccionado.titulo,
+
+            retoDescripcion: retoSeleccionado.descripcion
+
+        });
+
+    };
+
+
+    // ==========================================
     // REGRESAR A LA SELECCIÓN DE RETOS
     // ==========================================
 
@@ -220,7 +260,7 @@ export default function Retos({
                         retoTitulo={retoSeleccionado.titulo}
                         retoDescripcion={retoSeleccionado.descripcion}
                         onCambiarReto={cambiarReto}
-                        onRetoFinalizado={onFinalizarReto}
+                        onRetoFinalizado={manejarRetoFinalizado}
                     />
 
                 </main>

@@ -1,27 +1,14 @@
 
-import { useEffect, useState } from 'react';
 import './resultados.css';
-import { obtenerResultados } from '../servicios/servicioResultados';
-import type { EvaluacionFacione } from '../servicios/servicioResultados';
 
+import type { EvaluacionFacione } from '../servicios/servicioResultados';
 
 interface ResultadosProps {
     sesionId: string;
-    onVolver: () => void;
-}
-
-interface ResultadoReto {
-    id: string;
-    titulo: string;
-    descripcion?: string | null;
-}
-
-interface DatosResultados {
-    exito: boolean;
-    mensaje: string;
-    sesionId: string;
-    reto: ResultadoReto;
     evaluacion: EvaluacionFacione;
+    retoTitulo: string;
+    retoDescripcion: string;
+    onVolver: () => void;
 }
 
 interface DimensionFacione {
@@ -78,7 +65,10 @@ const dimensiones: DimensionFacione[] = [
     }
 ];
 
-function convertirPuntuacion(valor: number | string | null | undefined): number {
+function convertirPuntuacion(
+    valor: number | string | null | undefined
+): number {
+
     const numero = Number(valor);
 
     if (!Number.isFinite(numero)) {
@@ -86,111 +76,34 @@ function convertirPuntuacion(valor: number | string | null | undefined): number 
     }
 
     return Math.min(100, Math.max(0, numero));
+
 }
 
 function obtenerNivel(puntuacion: number): string {
+
     if (puntuacion >= 80) return 'Alto';
+
     if (puntuacion >= 60) return 'En desarrollo';
+
     if (puntuacion >= 1) return 'Inicial';
+
     return 'Sin evidencia suficiente';
+
 }
 
 export default function Resultados({
     sesionId,
+    evaluacion,
+    retoTitulo,
+    retoDescripcion,
     onVolver
 }: ResultadosProps) {
 
-    const [datos, setDatos] = useState<DatosResultados | null>(null);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-
-        let componenteActivo = true;
-
-        async function cargarResultados() {
-
-            try {
-
-                setCargando(true);
-                setError('');
-
-                const respuesta = await obtenerResultados(sesionId);
-
-                if (!componenteActivo) return;
-
-                if (!respuesta.exito || !respuesta.evaluacion) {
-                    throw new Error(
-                        respuesta.mensaje || 'No fue posible obtener la evaluación.'
-                    );
-                }
-
-                setDatos(respuesta);
-
-            } catch (error: unknown) {
-
-                if (!componenteActivo) return;
-
-                const mensaje = error instanceof Error
-                    ? error.message
-                    : 'Ocurrió un error al consultar los resultados.';
-
-                setError(mensaje);
-
-            } finally {
-
-                if (componenteActivo) {
-                    setCargando(false);
-                }
-
-            }
-
-        }
-
-        cargarResultados();
-
-        return () => {
-            componenteActivo = false;
-        };
-
-    }, [sesionId]);
-
-
     // ==========================================
-    // ESTADO DE CARGA
+    // VALIDAR EVALUACIÓN RECIBIDA
     // ==========================================
 
-    if (cargando) {
-
-        return (
-
-            <section className="resultados-pagina">
-
-                <div className="resultados-cargando">
-
-                    <div className="resultados-spinner" />
-
-                    <h2>Analizando tu aprendizaje...</h2>
-
-                    <p>
-                        Estamos preparando los resultados de tu experiencia
-                        con Sócrates IA.
-                    </p>
-
-                </div>
-
-            </section>
-
-        );
-
-    }
-
-
-    // ==========================================
-    // ESTADO DE ERROR
-    // ==========================================
-
-    if (error || !datos) {
+    if (!evaluacion) {
 
         return (
 
@@ -200,10 +113,11 @@ export default function Resultados({
 
                     <span className="resultados-error-icono">!</span>
 
-                    <h1>No fue posible cargar los resultados</h1>
+                    <h1>No hay una evaluación disponible</h1>
 
                     <p>
-                        {error || 'No se encontraron resultados para esta sesión.'}
+                        No fue posible encontrar los datos de la evaluación
+                        de este reto.
                     </p>
 
                     <button
@@ -225,8 +139,6 @@ export default function Resultados({
     // ==========================================
     // RESULTADOS
     // ==========================================
-
-    const evaluacion = datos.evaluacion;
 
     return (
 
@@ -272,11 +184,11 @@ export default function Resultados({
                     <span>RETO REALIZADO</span>
 
                     <h2>
-                        {datos.reto.titulo}
+                        {retoTitulo}
                     </h2>
 
-                    {datos.reto.descripcion && (
-                        <p>{datos.reto.descripcion}</p>
+                    {retoDescripcion && (
+                        <p>{retoDescripcion}</p>
                     )}
 
                 </div>
