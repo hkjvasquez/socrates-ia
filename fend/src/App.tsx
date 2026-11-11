@@ -8,6 +8,7 @@ import Retos from './paginas/retos';
 import EvaluacionCognitiva from './paginas/evaluacionCognitiva';
 import Resultados from './paginas/Resultados';
 import GestionEstudiantes from './paginas/GestionEstudiantes';
+import GestionAcademica from './paginas/GestionAcademica';
 import ResultadosDocente from './paginas/ResultadosDocente';
 
 import type { UsuarioAutenticado } from './servicios/servicioAuth';
@@ -565,6 +566,11 @@ function App() {
 
             if (seccion === 'estudiantes') {
                 return <GestionEstudiantes />;
+            }
+
+            // Nueva página de Gestión académica.
+            if (seccion === 'gestionMaterias') {
+                return <GestionAcademica />;
             }
 
             return mostrarPaginaDocente();
